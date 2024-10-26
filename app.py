@@ -11,15 +11,16 @@ model = joblib.load('risk_model.joblib')
 # Load unique states, counties, and disaster types for dropdowns
 data = pd.read_csv('PredictionDataSet.csv')
 disaster_types = ['Avalanche', 'Coastal Flooding', 'Cold Wave', 'Drought', 'Earthquake',
-                 'Hail', 'Heatwave', 'Hurricane', 'Icestorm', 'Landslide', 'Lightning',
-                 'Riverine', 'Flooding', 'Strong Wind', 'Tornado', 'Tsunami',
-                 'Volcanic Activity', 'Wildfire', 'Winter Weather']
+                  'Hail', 'Heatwave', 'Hurricane', 'Icestorm', 'Landslide', 'Lightning',
+                  'Riverine', 'Flooding', 'Strong Wind', 'Tornado', 'Tsunami',
+                  'Volcanic Activity', 'Wildfire', 'Winter Weather']
 
 states = sorted(data['State'].unique())
 counties = sorted(data['County'].unique())
 
 # Define annual risk increase rate (e.g., 1.5%)
 ANNUAL_RISK_INCREASE = 0.015
+
 
 def get_future_risk_scores(base_risk, max_years=50):
     """
@@ -29,6 +30,7 @@ def get_future_risk_scores(base_risk, max_years=50):
     risk_scores = base_risk * (1 + ANNUAL_RISK_INCREASE) ** years
     risk_scores = np.round(risk_scores, 2)
     return {'labels': years.tolist(), 'data': risk_scores.tolist()}
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -73,6 +75,7 @@ def index():
                            counties=counties,
                            disaster_types=disaster_types,
                            prediction=None)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
