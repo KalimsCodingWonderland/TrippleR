@@ -135,6 +135,8 @@
             document.querySelector(`button[onclick="showForm('${formId}')"]`).classList.add('active');
         }
 
+        let baseRiskScore;
+
         async function calculateBaseRisk() {
             const state = document.getElementById('state').value;
             const county = document.getElementById('county').value;
@@ -153,6 +155,7 @@
                 });
 
                 const data = await response.json();
+                baseRiskScore = data.risk_score;
                 document.getElementById("base-result").innerHTML = `Base Risk Score: ${data.risk_score} (Calculated for ${disaster} in ${county}, ${state})`;
             } catch (error) {
                 console.error('Error calculating base risk:', error);
@@ -168,9 +171,10 @@
 
             // Generate sample risk scores for each year (replace with actual logic)
             const riskScores = [];
+
             for (let i = 0; i <= years; i++) {
-                // Sample formula: (risk score increases by 0.5 each year, just for illustration)
-                riskScores.push((Math.sin(i / 10) + i * 0.5) % 10 + 5); // example values
+                let riskScore = baseRiskScore * Math.pow(1 + 0.036, i);
+                riskScores.push(parseFloat(riskScore.toFixed(2))); // Round to 2 decimal places for readability
             }
 
             // Generate year labels
