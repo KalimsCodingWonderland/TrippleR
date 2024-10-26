@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Risk Assessment Predictor</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <style>
         /* Main Page Styling */
         body {
@@ -122,16 +123,22 @@
 
     <script>
         function showSection(sectionId) {
+            // Hide all main sections
             document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+            // Show the selected section
             document.getElementById(sectionId).classList.add('active');
+            // Update active tab button
             document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
             document.querySelector(`button[onclick="showSection('${sectionId}')"]`).classList.add('active');
         }
 
         function showForm(formId) {
+            // Hide all forms within the Recognition section
             document.querySelectorAll('#recognition .section').forEach(section => section.classList.remove('active'));
+            // Show the selected form
             document.getElementById(formId).classList.add('active');
-            document.querySelectorAll('.tab-buttons .tab-button').forEach(button => button.classList.remove('active'));
+            // Update active tab button within Recognition
+            document.querySelectorAll('#recognition .tab-buttons .tab-button').forEach(button => button.classList.remove('active'));
             document.querySelector(`button[onclick="showForm('${formId}')"]`).classList.add('active');
         }
 
@@ -139,6 +146,12 @@
             const state = document.getElementById('state').value;
             const county = document.getElementById('county').value;
             const disaster = document.getElementById('disaster').value;
+
+            // Validate inputs
+            if (!state || !county || !disaster) {
+                alert('Please select state, county, and disaster type.');
+                return;
+            }
 
             // Prepare the request data
             const requestData = { state, county, disaster };
@@ -152,10 +165,16 @@
                     body: JSON.stringify(requestData)
                 });
 
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'An error occurred while calculating risk.');
+                }
+
                 const data = await response.json();
-                document.getElementById("base-result").innerHTML = `Base Risk Score: ${data.risk_score} (Calculated for ${disaster} in ${county}, ${state})`;
+                document.getElementById("base-result").innerHTML = `Base Risk Score: <strong>${data.risk_score}</strong> (Calculated for ${disaster} in ${county}, ${state})`;
             } catch (error) {
                 console.error('Error calculating base risk:', error);
+                document.getElementById("base-result").innerHTML = `<span style="color: red;">Error: ${error.message}</span>`;
             }
         }
 
@@ -164,9 +183,9 @@
 
         function calculatePredictiveRisk() {
             let years = document.getElementById('time').value;
-            document.getElementById("predictive-result").innerHTML = `Predictive Risk Score over ${years} years`;
+            document.getElementById("predictive-result").innerHTML = `Predictive Risk Score over <strong>${years}</strong> years`;
 
-            // Generate sample risk scores for each year (replace with actual logic)
+            // Generate sample risk scores for each year (replace with actual logic if needed)
             const riskScores = [];
             for (let i = 0; i <= years; i++) {
                 // Sample formula: (risk score increases by 0.5 each year, just for illustration)
@@ -199,8 +218,19 @@
                 options: {
                     responsive: true,
                     scales: {
-                        x: { title: { display: true, text: 'Years' }},
-                        y: { title: { display: true, text: 'Risk Score' }}
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Years'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Risk Score'
+                            },
+                            beginAtZero: true
+                        }
                     },
                     plugins: {
                         legend: { display: true },
@@ -216,4 +246,3 @@
     </script>
 </body>
 </html>
-

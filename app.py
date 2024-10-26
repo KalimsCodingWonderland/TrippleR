@@ -1,15 +1,23 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import joblib
 import pandas as pd
 import numpy as np
+import os
 
 app = Flask(__name__)
 
 # Load the trained model
-model = joblib.load('risk_model.joblib')
+try:
+    model = joblib.load('risk_model.joblib')
+except FileNotFoundError:
+    raise FileNotFoundError("The model file 'risk_model.joblib' was not found. Ensure it's in the correct directory.")
 
 # Load unique states, counties, and disaster types for dropdowns
-data = pd.read_csv('PredictionDataSet.csv')
+try:
+    data = pd.read_csv('PredictionDataSet.csv')
+except FileNotFoundError:
+    raise FileNotFoundError("The data file 'PredictionDataSet.csv' was not found. Ensure it's in the correct directory.")
+
 disaster_types = ['Avalanche', 'Coastal Flooding', 'Cold Wave', 'Drought', 'Earthquake',
                   'Hail', 'Heatwave', 'Hurricane', 'Icestorm', 'Landslide', 'Lightning',
                   'Riverine', 'Flooding', 'Strong Wind', 'Tornado', 'Tsunami',
@@ -22,23 +30,31 @@ counties = sorted(data['County'].unique())
 ANNUAL_RISK_INCREASE = 0.015
 
 
-def get_future_risk_scores(base_risk, max_years=50):
-    """
-    Generate future risk scores over a range of years based on an annual increase rate.
-    """
-    years = np.arange(0, max_years + 1)
-    risk_scores = base_risk * (1 + ANNUAL_RISK_INCREASE) ** years
-    risk_scores = np.round(risk_scores, 2)
-    return {'labels': years.tolist(), 'data': risk_scores.tolist()}
+@app.route('/', methods=['GET'])
+def home():
+    return render_template('index.html',
+                           states=states,
+                           counties=counties,
+                           disaster_types=disaster_types,
+                           prediction=None)
 
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        state = request.form['state']
-        county = request.form['county']
-        disaster = request.form['disaster']
-        time = int(request.form.get('time', 0))
+@app.route('/predict', methods=['POST'])
+def predict():
+    """
+    Handle AJAX POST requests to calculate the base risk score.
+    Expects JSON data with 'state', 'county', and 'disaster'.
+    Returns JSON response with 'risk_score'.
+    """
+    if request.is_json:
+        data = request.get_json()
+        state = data.get('state')
+        county = data.get('county')
+        disaster = data.get('disaster')
+
+        # Validate input
+        if not all([state, county, disaster]):
+            return jsonify({'error': 'Missing data: state, county, and disaster are required.'}), 400
 
         # Create a DataFrame for prediction
         input_data = pd.DataFrame({
@@ -49,33 +65,28 @@ def index():
         })
 
         # Predict base risk
-        base_risk = model.predict(input_data)[0]
-        base_risk = round(base_risk, 2)
+        try:
+            base_risk = model.predict(input_data)[0]
+            base_risk = round(base_risk, 2)
+        except Exception as e:
+            return jsonify({'error': f'Error during prediction: {str(e)}'}), 500
 
-        # Adjust risk based on time
-        adjusted_risk = base_risk * (1 + ANNUAL_RISK_INCREASE) ** time
-        adjusted_risk = round(adjusted_risk, 2)
+        return jsonify({'risk_score': base_risk})
+    else:
+        return jsonify({'error': 'Request must be in JSON format.'}), 400
 
-        # Generate chart data
-        chart_data = get_future_risk_scores(base_risk, max_years=50)
 
-        return render_template('index.html',
-                               states=states,
-                               counties=counties,
-                               disaster_types=disaster_types,
-                               prediction=adjusted_risk,
-                               base_prediction=base_risk,
-                               state=state,
-                               county=county,
-                               disaster=disaster,
-                               time=time,
-                               chart_data=chart_data)
-    return render_template('index.html',
-                           states=states,
-                           counties=counties,
-                           disaster_types=disaster_types,
-                           prediction=None)
+@app.route('/favicon.ico')
+def favicon():
+    """
+    Serve the favicon.ico file to eliminate 404 errors for favicon requests.
+    Ensure that 'favicon.ico' is placed inside the 'static' directory.
+    """
+    return app.send_static_file('favicon.ico')
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Determine the port to run the app on
+    port = int(os.environ.get('PORT', 5000))
+    # Run the Flask app
+    app.run(debug=True, port=port)
