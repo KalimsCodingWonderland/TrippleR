@@ -4,40 +4,46 @@
     <title>Risk Assessment Predictor</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
-        .container { max-width: 500px; margin: auto; }
+        .container { max-width: 800px; margin: auto; }
         label { display: block; margin-top: 10px; }
         select, input { width: 100%; padding: 8px; margin-top: 5px; }
         button { margin-top: 20px; padding: 10px; width: 100%; }
         .result { margin-top: 20px; padding: 10px; background-color: #f0f0f0; }
+        #chart-container { margin-top: 30px; }
     </style>
+    <!-- Include Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
         <h2>Natural Disaster Risk Assessment</h2>
-        <form method="POST">
+        <form method="POST" id="risk-form">
             <label for="state">State:</label>
             <select name="state" id="state" required>
                 <option value="" disabled selected>Select a state</option>
-                {% for state in states %}
-                    <option value="{{ state }}" {% if state == state %}selected{% endif %}>{{ state }}</option>
+                {% for state_option in states %}
+                    <option value="{{ state_option }}" {% if state_option == state %}selected{% endif %}>{{ state_option }}</option>
                 {% endfor %}
             </select>
 
             <label for="county">County:</label>
             <select name="county" id="county" required>
                 <option value="" disabled selected>Select a county</option>
-                {% for county in counties %}
-                    <option value="{{ county }}" {% if county == county %}selected{% endif %}>{{ county }}</option>
+                {% for county_option in counties %}
+                    <option value="{{ county_option }}" {% if county_option == county %}selected{% endif %}>{{ county_option }}</option>
                 {% endfor %}
             </select>
 
             <label for="disaster">Type of Natural Disaster:</label>
             <select name="disaster" id="disaster" required>
                 <option value="" disabled selected>Select a disaster type</option>
-                {% for disaster in disaster_types %}
-                    <option value="{{ disaster }}" {% if disaster == disaster %}selected{% endif %}>{{ disaster }}</option>
+                {% for disaster_option in disaster_types %}
+                    <option value="{{ disaster_option }}" {% if disaster_option == disaster %}selected{% endif %}>{{ disaster_option }}</option>
                 {% endfor %}
             </select>
+
+            <label for="time">Future Period (Years): <span id="time-value">{{ time if time else 0 }}</span></label>
+            <input type="range" id="time" name="time" min="0" max="50" value="{{ time if time else 0 }}" oninput="updateTimeValue(this.value)" />
 
             <button type="submit">Predict Risk</button>
         </form>
@@ -45,9 +51,60 @@
         {% if prediction is not none %}
             <div class="result">
                 <h3>Predicted Risk Assessment:</h3>
-                <p>The risk level for a <strong>{{ disaster }}</strong> in <strong>{{ county }}, {{ state }}</strong> is <strong>{{ prediction }}</strong>.</p>
+                <p>
+                    The base risk level for a <strong>{{ disaster }}</strong> in <strong>{{ county }}, {{ state }}</strong> is <strong>{{ base_prediction }}</strong>.
+                </p>
+                <p>
+                    Over the next <strong>{{ time }} years</strong>, the risk level is projected to increase to <strong>{{ prediction }}</strong>.
+                </p>
+            </div>
+
+            <div id="chart-container">
+                <h3>Risk Score Over Time</h3>
+                <canvas id="riskChart"></canvas>
             </div>
         {% endif %}
     </div>
+
+    {% if prediction is not none %}
+    <script>
+        function updateTimeValue(val) {
+            document.getElementById('time-value').innerText = val;
+        }
+
+        // Data passed from Flask
+        const chartData = {{ chart_data|safe }};
+        const labels = chartData.labels;
+        const data = chartData.data;
+
+        const ctx = document.getElementById('riskChart').getContext('2d');
+        const riskChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Risk Score',
+                    data: data,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Years from Now' },
+                        ticks: { stepSize: 5 }
+                    },
+                    y: {
+                        title: { display: true, text: 'Risk Score' },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+    {% endif %}
 </body>
 </html>
