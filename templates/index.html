@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Risk Assessment Predictor</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 500px; margin: auto; }
+        label { display: block; margin-top: 10px; }
+        select, input { width: 100%; padding: 8px; margin-top: 5px; }
+        button { margin-top: 20px; padding: 10px; width: 100%; }
+        .result { margin-top: 20px; padding: 10px; background-color: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Natural Disaster Risk Assessment</h2>
+        <form method="POST">
+            <label for="state">State:</label>
+            <select name="state" id="state" required>
+                <option value="" disabled selected>Select a state</option>
+                {% for state in states %}
+                    <option value="{{ state }}" {% if state == state %}selected{% endif %}>{{ state }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="county">County:</label>
+            <select name="county" id="county" required>
+                <option value="" disabled selected>Select a county</option>
+                {% for county in counties %}
+                    <option value="{{ county }}" {% if county == county %}selected{% endif %}>{{ county }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="disaster">Type of Natural Disaster:</label>
+            <select name="disaster" id="disaster" required>
+                <option value="" disabled selected>Select a disaster type</option>
+                {% for disaster in disaster_types %}
+                    <option value="{{ disaster }}" {% if disaster == disaster %}selected{% endif %}>{{ disaster }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit">Predict Risk</button>
+        </form>
+
+        {% if prediction is not none %}
+            <div class="result">
+                <h3>Predicted Risk Assessment:</h3>
+                <p>The risk level for a <strong>{{ disaster }}</strong> in <strong>{{ county }}, {{ state }}</strong> is <strong>{{ prediction }}</strong>.</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
